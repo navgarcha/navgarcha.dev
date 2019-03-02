@@ -1,0 +1,53 @@
+service: navgarcha
+
+provider:
+  name: aws
+  runtime: nodejs8.10
+  region: eu-west-2
+
+resources:
+  Resources:
+    SiteBucket:
+      Type: AWS::S3::Bucket
+      Properties:
+        AccessControl: PublicRead
+        BucketName: ${self:custom.siteName}
+        WebsiteConfiguration:
+          IndexDocument: index.html
+          ErrorDocument: index.html
+    SiteRedirectBucket:
+      Type: AWS::S3::Bucket
+      Properties:
+        AccessControl: BucketOwnerFullControl
+        BucketName: www.${self:custom.siteName}
+        WebsiteConfiguration:
+          RedirectAllRequestsTo:
+            HostName: ${self:custom.siteName}
+            Protocol: https
+    SiteBucketPolicy:
+      Type: AWS::S3::BucketPolicy
+      Properties:
+        Bucket:
+          Ref: SiteBucket
+        PolicyDocument:
+          Statement:
+            - Sid: PublicReadGetObject
+              Effect: Allow
+              Principal: '*'
+              Action:
+                - s3:GetObject
+              Resource:
+                Fn::Join:
+                  - ''
+                  - - 'arn:aws:s3:::'
+                    - Ref: SiteBucket
+                    - '/*'
+
+plugins:
+  - serverless-s3-sync
+
+custom:
+  siteName: navgarcha.dev
+  s3Sync:
+    - bucketName: ${self:custom.siteName}
+      localDir: build
